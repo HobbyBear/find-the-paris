@@ -89,7 +89,7 @@ void initInput(char input[100]) {
 }
 
 int printMaskGrids(struct point p, char grids[4][4],
-                   struct point *pList[], char input[], int count) {
+                   char history_grids[4][4], char input[], int count) {
     char maskGrids[4][4];
     int i, j;
     for (i = 0; i < 4; i++) {
@@ -99,12 +99,12 @@ int printMaskGrids(struct point p, char grids[4][4],
     }
 
     // 将点击过的都显示出来，然后判断是否正确
-    for (i = 0; i < 16; i++) {
-        if (pList[i] != NULL) {
-            maskGrids[pList[i]->x][pList[i]->y] =
-                    grids[pList[i]->x][pList[i]->y];
-        }
+    for (i = 0; i < 4; i++) {
+       for (j = 0; j< 4;j++){
+         maskGrids[i][j] = history_grids[i][j];
+       }
     }
+
     maskGrids[p.x][p.y] = grids[p.x][p.y];
 
     printGrids(maskGrids);
@@ -122,42 +122,160 @@ int printMaskGrids(struct point p, char grids[4][4],
     return 1;
 }
 
-void initPointList(struct point *pList[16]) {
-    int i = 0;
-    for (i = 0; i < 16; i++) {
-        pList[i] = NULL;
+void initHistoryGrid(char pList[4][4]) {
+    int i = 0,j=0;
+    for (i = 0; i < 4; i++) {
+      for (j =0;j < 4;j++){
+			pList[i][j] = '*';
+      }
     }
 }
 
-void printMaskGridsOnFail(char grids[4][4], struct point *pList[16]) {
-    char maskGrids[4][4];
-    int i, j;
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < 4; j++) {
-            maskGrids[i][j] = '*';
-        }
-    }
+struct history_grade {
+  char grids[4][4];
+  char history_grids[4][4];
+  int num ; // 翻开的元素数量
+  int totalCount ; // 翻牌的次数
+  int errorCount ; // 错误的次数
+  char name[10];
+  boolean  is_del;
+};
 
-    // 将点击过的都显示出来，然后判断是否正确
-    for (i = 0; i < 16; i++) {
-        if (pList[i] != NULL) {
-            maskGrids[pList[i]->x][pList[i]->y] =
-                    grids[pList[i]->x][pList[i]->y];
-        }
+void write_db(struct history_grade grade) {
+  FILE *fp = fopen("grade.txt", "a+");
+  fprintf(fp, "一共答对%d个元素,错误%d次，翻排%d次,是否删除:%d\n", grade.num, grade.errorCount, grade.totalCount,grade.is_del);
+  int i = 0, j = 0;
+  for (i = 0; i < 4; i++) {
+	for (j = 0; j < 4; j++) {
+	  fprintf(fp, "%c ", grade.grids[i][j]);
+	}
+	fprintf(fp, "\n");
+  }
+  fprintf(fp,"答题记录\n");
+  for (i = 0; i < 4; i++) {
+	for (j = 0; j < 4; j++) {
+	  fscanf(fp, "%c ", &grade.history_grids[i][j]);
+	}
+	fscanf(fp, "\n");
+  }
+  fclose(fp);
+}
+
+int read_db(struct history_grade grade_list [100]) {
+  FILE *fp = fopen("grade.txt", "r");
+  int size =0;
+  while (1) {
+    struct history_grade grade;
+	if (fscanf(fp, "一共答对%d个元素,错误%d次，翻排%d次\n", &grade.num, &grade.errorCount, &grade.totalCount) == EOF){
+	  break;
+	}
+	int i = 0, j = 0;
+	for (i = 0; i < 4; i++) {
+	  for (j = 0; j < 4; j++) {
+		fscanf(fp, "%c ", &grade.grids[i][j]);
+	  }
+	  fscanf(fp, "\n");
+	}
+	fscanf(fp,"答题记录\n");
+	for (i = 0; i < 4; i++) {
+	  for (j = 0; j < 4; j++) {
+		fscanf(fp, "%c ", &grade.history_grids[i][j]);
+	  }
+	  fscanf(fp, "\n");
+	}
+	grade_list[size] = grade;
+	size++;
+  }
+  fclose(fp);
+  return size;
+}
+
+
+
+
+
+
+void recordGrade(FILE *fp, struct history_grade history_grade_list[100],int size,struct history_grade grade){
+  history_grade_list[size + 1] = grade;
+	remove("grade.txt");
+
+  if ((fp = fopen("grade.txt", "rb")) == NULL && (fp = fopen("grade.txt", "wb+")) == NULL) {
+	printf("无法建立文件！\n");
+	exit(0);
+  }
+  int i=0;
+  for (i =0; i < size + 1;i++){
+	fwrite(&history_grade_list[i], sizeof(struct history_grade), 1, fp);
+  }
+}
+
+struct history_grade genGrade(int num,int totalNum,int errCount,char grids[4][4],char history_grids[4][4],char name[10]){
+  struct history_grade grade;
+  grade.num = num;
+  grade.totalCount = totalNum;
+  grade.errorCount = errCount;
+  grade.is_del = 0;
+  int i,j;
+  for(i = 0; i < 4;i++){
+	for(j = 0; j < 4;j++){
+	  grade.grids[i][j] = grids[i][j];
+	  grade.history_grids[i][j] = history_grids[i][j];
+	}
+  }
+  for (i=0;i < 10; i++){
+    grade.name[i] = name[i];
+  }
+  return grade;
+}
+
+void printHistoryGrade(struct history_grade history_grade_list[100],int size){
+  int i =0;
+  for(i =0; i < size; i++){
+    if (history_grade_list[i].is_del == 1){
+	  continue;
     }
+    printf("record id is %d\n",i);
+    printf("open num count: %d,total open num: %d,err open count: %d\n",history_grade_list[i].num,
+		   history_grade_list[i].totalCount,history_grade_list[i].errorCount);
+    printf("standard answer is\n-----------------------------\n");
+	printGrids(history_grade_list[i].grids);
+	printf("your answer is\n-----------------------------\n");
+	printGrids(history_grade_list[i].history_grids);
+  }
+}
+
+void delHistoryGrade(FILE *fp,struct history_grade history_grade_list[100],int size,int delNum){
+  int i =0;
+  for(i =0; i < size; i++){
+	if (i == delNum){
+	  history_grade_list[i].is_del = 1;
+	}
+  }
+  remove("grade.txt");
+  if ((fp = fopen("grade.txt", "rb")) == NULL && (fp = fopen("grade.txt", "wb+")) == NULL) {
+	printf("无法建立文件！\n");
+	exit(0);
+  }
+  for (i =0; i < size + 1;i++){
+	fwrite(&history_grade_list[i], sizeof(struct history_grade), 1, fp);
+  }
 }
 
 int main() {
 
     FILE *fp;
+  	FILE *fp_grade;
 
-    if ((fp = fopen("user.txt", "rb")) == NULL && (fp = fopen("users.txt", "wb+")) == NULL) {
+    if ((fp = fopen("user.txt", "rb")) == NULL && (fp = fopen("users.txt", "ab+")) == NULL) {
         printf("无法建立文件！\n");
         exit(0);
     }
 
+  	struct history_grade history_grade_list [100];
+ 	 int history_grade_list_size = 0;
+  history_grade_list_size = read_db(history_grade_list);
     struct user u;
-
+	printf("历史记录有%d条\n",history_grade_list_size);
     start:
     printf("welcome to find the paris.\n");
     printf("1. press 1 to login.\n");
@@ -213,9 +331,30 @@ int main() {
     int menu = 0;
     scanf("%d", &menu);
     switch (menu) {
-        case 1:
-            break;
         case 2:
+        history:
+          	printHistoryGrade(history_grade_list,history_grade_list_size);
+          	printf("you can input num to del record or exit\n");
+            printf("1,del record.\n2,back to menu\n");
+            _flushall();
+            int command = 0;
+            scanf("%d",&command);
+		switch (command) {
+		  case 2: goto menuBar;
+		  case 1:
+		    printf("please input the record id to delete\n");
+		    _flushall();
+		    int delNum = 0;
+		    scanf("%d",&delNum);
+		    delHistoryGrade(fp_grade,history_grade_list,history_grade_list_size,delNum);
+		  	printf("delete success\n");
+		  	goto history;
+		    default:
+			printf("please input one or two!\n");
+			_flushall();
+			goto menuBar;
+		}
+        case 1:
             printf("there will show 8 X 8 grids ,please remember more about it!\n");
             char grids[4][4];
             generateGrids(grids);
@@ -225,54 +364,63 @@ int main() {
             printf("please input the point you want to see.\n");
             char input[100];
             initInput(input);
-            struct point *pList[16];
-            initPointList(pList);
+            char history_grids[4][4];
+			initHistoryGrid(history_grids);
             int num = 0; // 翻开的元素数量
             int totalCount = 0; // 翻牌的次数
             int errorCount = 0; // 错误的次数
-            struct point p;
-            while (num <= 16 && errorCount <= 3) {
+      input_x:
                 printf("please input your x\n");
                 _flushall();
                 int x = 0;
                 scanf("%d", &x);
                 if (x < 0 || x >= 4) {
                     printf("the num ranges 0 from 3 ,please input again!\n");
-                    continue;
+				  goto input_x;
                 }
+	  input_y:
                 printf("please input your y\n");
                 _flushall();
                 int y = 0;
                 scanf("%d", &y);
                 if (y < 0 || y >= 4) {
                     printf("the num ranges 0 from 3 ,please input again!\n");
-                    continue;
+				  goto input_y;;
                 }
+			  struct point p;
                 p.y = y;
                 p.x = x;
                 num++;
                 totalCount++;
-                boolean succ = printMaskGrids(p, grids, pList, input, num);
+                if (history_grids[x][y] != '*'){
+                  printf("the point has been input!\n");
+                  _flushall();
+				  goto input_x;
+                }
+                boolean succ = printMaskGrids(p, grids, history_grids, input, num);
                 if (succ) {
-                    pList[num] = &p;
+                    history_grids[x][y] = grids[x][y];
                     input[grids[p.x][p.y]] = grids[p.x][p.y];
-                    // todo 记录成绩
-                    continue;
+				  history_grade_list_size++;
+				  if (num == 16){
+					recordGrade(fp_grade,history_grade_list,history_grade_list_size,
+								genGrade(num,totalCount,errorCount,grids,history_grids,u.name));
+				  }
+				  goto input_x;;
                 } else {
                     num--;
                     errorCount++;
-                    printMaskGridsOnFail(grids, pList);
+                    printGrids(history_grids);
                     if (errorCount >= 3) {
                         printf("the fail count is more than 3!\n");
                         // todo 记录成绩
-                        continue;
+					  recordGrade(fp_grade,history_grade_list,history_grade_list_size,
+								  genGrade(num,totalCount,errorCount,grids,history_grids,u.name));					  history_grade_list_size++;
+					  goto menuBar;
                     }
-                    continue;
+				  goto input_x;
                 }
-            }
-            if (errorCount >= 3) {
-                goto menuBar;
-            }
+
         case 3:
             printf("closing......\n");
             Sleep(3);

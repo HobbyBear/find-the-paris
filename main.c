@@ -138,7 +138,7 @@ struct history_grade {
   int totalCount ; // 翻牌的次数
   int errorCount ; // 错误的次数
   char name[10];
-  boolean  is_del;
+  int  is_del;
 };
 
 void write_db(struct history_grade grade) {
@@ -154,9 +154,9 @@ void write_db(struct history_grade grade) {
   fprintf(fp,"答题记录\n");
   for (i = 0; i < 4; i++) {
 	for (j = 0; j < 4; j++) {
-	  fscanf(fp, "%c ", &grade.history_grids[i][j]);
+	  fprintf(fp, "%c ", grade.history_grids[i][j]);
 	}
-	fscanf(fp, "\n");
+	fprintf(fp, "\n");
   }
   fclose(fp);
 }
@@ -166,7 +166,7 @@ int read_db(struct history_grade grade_list [100]) {
   int size =0;
   while (1) {
     struct history_grade grade;
-	if (fscanf(fp, "一共答对%d个元素,错误%d次，翻排%d次\n", &grade.num, &grade.errorCount, &grade.totalCount) == EOF){
+	if (fscanf(fp, "一共答对%d个元素,错误%d次，翻排%d次,是否删除:%d\n", &grade.num, &grade.errorCount, &grade.totalCount,&grade.is_del) == EOF){
 	  break;
 	}
 	int i = 0, j = 0;
@@ -190,24 +190,6 @@ int read_db(struct history_grade grade_list [100]) {
   return size;
 }
 
-
-
-
-
-
-void recordGrade(FILE *fp, struct history_grade history_grade_list[100],int size,struct history_grade grade){
-  history_grade_list[size + 1] = grade;
-	remove("grade.txt");
-
-  if ((fp = fopen("grade.txt", "rb")) == NULL && (fp = fopen("grade.txt", "wb+")) == NULL) {
-	printf("无法建立文件！\n");
-	exit(0);
-  }
-  int i=0;
-  for (i =0; i < size + 1;i++){
-	fwrite(&history_grade_list[i], sizeof(struct history_grade), 1, fp);
-  }
-}
 
 struct history_grade genGrade(int num,int totalNum,int errCount,char grids[4][4],char history_grids[4][4],char name[10]){
   struct history_grade grade;
@@ -244,7 +226,7 @@ void printHistoryGrade(struct history_grade history_grade_list[100],int size){
   }
 }
 
-void delHistoryGrade(FILE *fp,struct history_grade history_grade_list[100],int size,int delNum){
+int delHistoryGrade(struct history_grade history_grade_list[100],int size,int delNum){
   int i =0;
   for(i =0; i < size; i++){
 	if (i == delNum){
@@ -252,19 +234,12 @@ void delHistoryGrade(FILE *fp,struct history_grade history_grade_list[100],int s
 	}
   }
   remove("grade.txt");
-  if ((fp = fopen("grade.txt", "rb")) == NULL && (fp = fopen("grade.txt", "wb+")) == NULL) {
-	printf("无法建立文件！\n");
-	exit(0);
-  }
-  for (i =0; i < size + 1;i++){
-	fwrite(&history_grade_list[i], sizeof(struct history_grade), 1, fp);
-  }
+  return read_db(history_grade_list);
 }
 
 int main() {
 
     FILE *fp;
-  	FILE *fp_grade;
 
     if ((fp = fopen("user.txt", "rb")) == NULL && (fp = fopen("users.txt", "ab+")) == NULL) {
         printf("无法建立文件！\n");
@@ -346,7 +321,7 @@ int main() {
 		    _flushall();
 		    int delNum = 0;
 		    scanf("%d",&delNum);
-		    delHistoryGrade(fp_grade,history_grade_list,history_grade_list_size,delNum);
+			history_grade_list_size = delHistoryGrade(history_grade_list,history_grade_list_size,delNum);
 		  	printf("delete success\n");
 		  	goto history;
 		    default:
@@ -403,8 +378,7 @@ int main() {
                     input[grids[p.x][p.y]] = grids[p.x][p.y];
 				  history_grade_list_size++;
 				  if (num == 16){
-					recordGrade(fp_grade,history_grade_list,history_grade_list_size,
-								genGrade(num,totalCount,errorCount,grids,history_grids,u.name));
+					write_db(genGrade(num,totalCount,errorCount,grids,history_grids,u.name));
 				  }
 				  goto input_x;;
                 } else {
@@ -413,9 +387,8 @@ int main() {
                     printGrids(history_grids);
                     if (errorCount >= 3) {
                         printf("the fail count is more than 3!\n");
-                        // todo 记录成绩
-					  recordGrade(fp_grade,history_grade_list,history_grade_list_size,
-								  genGrade(num,totalCount,errorCount,grids,history_grids,u.name));					  history_grade_list_size++;
+					  write_db(genGrade(num,totalCount,errorCount,grids,history_grids,u.name));
+					  history_grade_list_size++;
 					  goto menuBar;
                     }
 				  goto input_x;

@@ -106,7 +106,7 @@ int printMaskGrids(struct point p, char grids[4][4],
         }
     }
 
-    // 将点击过的都显示出来，然后判断是否正确
+    // Display all the clicks, and then determine if they are correct
     for (i = 0; i < 4; i++) {
         for (j = 0; j < 4; j++) {
             maskGrids[i][j] = history_grids[i][j];
@@ -121,7 +121,7 @@ int printMaskGrids(struct point p, char grids[4][4],
         return 1;
     }
 
-    // 正确，那么就继续翻下一个
+
     if (input[grids[p.x][p.y]] == '*') {
         printf("sorry your answer is wrong!\n");
         _flushall();
@@ -142,16 +142,16 @@ void initHistoryGrid(char pList[4][4]) {
 struct history_grade {
     char grids[4][4];
     char history_grids[4][4];
-    int num; // 翻开的元素数量
-    int totalCount; // 翻牌的次数
-    int errorCount; // 错误的次数
+    int num; // Number of elements turned over
+  	int totalCount; // The number of flips
+  	int errorCount; // Number of errors
     char name[10];
     int is_del;
 };
 
 void write_db(struct history_grade grade) {
     FILE *fp = fopen("grade.txt", "a+");
-    fprintf(fp, "一共答对%d个元素,错误%d次，翻排%d次,是否删除:%d\n", grade.num, grade.errorCount, grade.totalCount, grade.is_del);
+    fprintf(fp, "Total answer %d elements, error %d, reverse %d, delete or not:%d\n", grade.num, grade.errorCount, grade.totalCount, grade.is_del);
     int i = 0, j = 0;
     for (i = 0; i < 4; i++) {
         for (j = 0; j < 4; j++) {
@@ -159,7 +159,7 @@ void write_db(struct history_grade grade) {
         }
         fprintf(fp, "\n");
     }
-    fprintf(fp, "答题记录属于用户%s\n", grade.name);
+    fprintf(fp, "Answer records belong to users %s\n", grade.name);
     for (i = 0; i < 4; i++) {
         for (j = 0; j < 4; j++) {
             fprintf(fp, "%c ", grade.history_grids[i][j]);
@@ -176,7 +176,7 @@ int read_db(struct history_grade grade_list[100]) {
     int size = 0;
     while (1) {
         struct history_grade grade;
-        if (fscanf(fp, "一共答对%d个元素,错误%d次，翻排%d次,是否删除:%d\n", &grade.num, &grade.errorCount, &grade.totalCount,
+        if (fscanf(fp, "Total answer %d elements, error %d, reverse %d, delete or not:%d\n", &grade.num, &grade.errorCount, &grade.totalCount,
                    &grade.is_del) == EOF) {
             break;
         }
@@ -187,7 +187,7 @@ int read_db(struct history_grade grade_list[100]) {
             }
             fscanf(fp, "\n");
         }
-        fscanf(fp, "答题记录属于用户%s\n", grade.name);
+        fscanf(fp, "Answer records belong to users %s\n", grade.name);
         for (i = 0; i < 4; i++) {
             for (j = 0; j < 4; j++) {
                 fscanf(fp, "%c ", &grade.history_grids[i][j]);
@@ -229,7 +229,7 @@ void printHistoryGrade(char name[]) {
     int num = -1;
     while (1) {
         struct history_grade grade;
-        if (fscanf(fp, "一共答对%d个元素,错误%d次，翻排%d次,是否删除:%d\n", &grade.num, &grade.errorCount, &grade.totalCount,
+        if (fscanf(fp, "Total answer %d elements, error %d, reverse %d, delete or not:%d\n", &grade.num, &grade.errorCount, &grade.totalCount,
                    &grade.is_del) == EOF) {
             break;
         }
@@ -241,7 +241,7 @@ void printHistoryGrade(char name[]) {
             }
             fscanf(fp, "\n");
         }
-        fscanf(fp, "答题记录属于用户%s\n", grade.name);
+        fscanf(fp, "Answer records belong to users %s\n", grade.name);
         for (i = 0; i < 4; i++) {
             for (j = 0; j < 4; j++) {
                 fscanf(fp, "%c ", &grade.history_grids[i][j]);
@@ -284,7 +284,7 @@ int main() {
     FILE *fp;
 
     if ((fp = fopen("users.txt", "rb")) == NULL && (fp = fopen("users.txt", "ab+")) == NULL) {
-        printf("无法建立文件！\n");
+        printf("can not create file！\n");
         exit(0);
     }
     fclose(fp);
@@ -296,6 +296,7 @@ int main() {
     printf("welcome to find the paris.\n");
     printf("1. press 1 to login.\n");
     printf("2.press 2 to register.\n");
+  	printf("3.press 3 to exit.\n");
     _flushall();
     int logOrReg = 0;
     scanf("%d", &logOrReg);
@@ -335,8 +336,12 @@ int main() {
             _flushall();
             Sleep(1);
             goto start;
+	  case 3:
+		printf("closing......\n");
+		Sleep(3);
+		exit(0);
         default:
-            printf("please input one or tow !\n");
+            printf("please input one or tow or three !\n");
             goto start;
     }
 
@@ -388,9 +393,9 @@ int main() {
             initInput(input);
             char history_grids[4][4];
             initHistoryGrid(history_grids);
-            int num = 0; // 翻开的元素数量
-            int totalCount = 0; // 翻牌的次数
-            int errorCount = 0; // 错误的次数
+            int num = 0; // Number of elements turned over
+			int totalCount = 0; // The number of flips
+			int errorCount = 0; //  Number of errors
         input_x:
             printf("please input your x\n");
             _flushall();

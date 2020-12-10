@@ -314,7 +314,7 @@ int main() {
             }
             printf("ok !you success login in \n");
             history_grade_list_size = read_db(history_grade_list);
-            printf("历史记录有%d条\n", history_grade_list_size);
+            printf("The history is % D\n", history_grade_list_size);
             _flushall();
             Sleep(2);
             break;
